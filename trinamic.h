@@ -42,6 +42,10 @@
 #define R_SENSE 75
 #include "../trinamic/tmc5160hal.h"
 #endif
+#if TRINAMIC_ENABLE == 2660
+#define R_SENSE 100
+#include "../trinamic/tmc2660hal.h"
+#endif
 
 #ifndef TMC_POLL_STALLED
 #if TRINAMIC_I2C

@@ -616,6 +616,8 @@ static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
         ok = (stepper[motor.id] = TMC2130_AddMotor(motor, cfg.settings->current, cfg.settings->microsteps, cfg.settings->r_sense)) != NULL;
     #elif TRINAMIC_ENABLE == 5160
         ok = (stepper[motor.id] = TMC5160_AddMotor(motor, cfg.settings->current, cfg.settings->microsteps, cfg.settings->r_sense)) != NULL;
+    #elif TRINAMIC_ENABLE == 2660
+        ok = (stepper[motor.id] = TMC2660_AddMotor(motor, cfg.settings->current, cfg.settings->microsteps, cfg.settings->r_sense)) != NULL;        
     #endif
 
     if(!ok) {
