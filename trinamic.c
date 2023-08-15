@@ -621,8 +621,10 @@ static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
     #endif
 
     if(!ok) {
+        #ifndef BOARD_LONGBOARD32
         protocol_enqueue_rt_command(pos_failed);
-    //    system_raise_alarm(Alarm_SelftestFailed);
+        #endif
+        system_raise_alarm(Alarm_SelftestFailed);
         return false;
     }
 
