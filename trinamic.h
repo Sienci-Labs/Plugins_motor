@@ -85,7 +85,10 @@ static const TMC_chopper_timing_t chopper_timing = { .hstrt = 1, .hend = -1, .tb
 #define TMC_X_ENABLE 1 // Do not change
 #endif
 #define TMC_X_MONITOR 1
-#define TMC_X_MICROSTEPS 16
+#ifndef TRINAMIC_DEFAULT_MICROSTEPS
+    #define TRINAMIC_DEFAULT_MICROSTEPS 16
+#endif
+#define TMC_X_MICROSTEPS TRINAMIC_DEFAULT_MICROSTEPS
 #define TMC_X_R_SENSE R_SENSE   // mOhm
 
 #ifndef DEFAULT_X_CURRENT
