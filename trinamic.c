@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2018-2022 Terje Io
+  Copyright (c) 2018-2023 Terje Io
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -110,25 +110,27 @@ static status_code_t set_driver_enable (setting_id_t id, uint_fast16_t value);
 static uint32_t get_driver_enable (setting_id_t setting);
 #endif
 
+#define AXIS_OPTS { .subgroups = On, .increment = 1 }
+
 static const setting_detail_t trinamic_settings[] = {
 #if TRINAMIC_MIXED_DRIVERS
     { Setting_TrinamicDriver, Group_MotorDriver, "Trinamic driver", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_NonCoreFn, set_driver_enable, get_driver_enable, NULL },
 #endif
     { Setting_TrinamicHoming, Group_MotorDriver, "Sensorless homing", NULL, Format_AxisMask, NULL, NULL, NULL, Setting_NonCore, &trinamic.homing_enable.mask, NULL, NULL },
-    { Setting_AxisStepperCurrent, Group_Axis0, "?-axis motor current", "mA", Format_Integer, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, NULL },
-    { Setting_AxisMicroSteps, Group_Axis0, "?-axis microsteps", "steps", Format_Integer, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, NULL },
-    { Setting_AxisHomingFeedRate, Group_Axis0, "?-axis homing locate feed rate", "mm/min", Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL },
-    { Setting_AxisHomingSeekRate, Group_Axis0, "?-axis homing search seek rate", "mm/min", Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL },
+    { Setting_AxisStepperCurrent, Group_Axis0, "-axis motor current", "mA", Format_Integer, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, NULL, AXIS_OPTS },
+    { Setting_AxisMicroSteps, Group_Axis0, "-axis microsteps", "steps", Format_Integer, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting, get_axis_setting, NULL, AXIS_OPTS },
+    { Setting_AxisHomingFeedRate, Group_Axis0, "-axis homing locate feed rate", "mm/min", Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
+    { Setting_AxisHomingSeekRate, Group_Axis0, "-axis homing search seek rate", "mm/min", Format_Decimal, "###0", NULL, NULL, Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #if TMC_STALLGUARD == 4
-    { Setting_AxisExtended0, Group_Axis0, "?-axis StallGuard4 fast threshold", NULL, Format_Decimal, "##0", "0", "255", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL },
+    { Setting_AxisExtended0, Group_Axis0, "-axis StallGuard4 fast threshold", NULL, Format_Decimal, "##0", "0", "255", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #else
-    { Setting_AxisExtended0, Group_Axis0, "?-axis StallGuard2 fast threshold", NULL, Format_Decimal, "-##0", "-64", "63", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL },
+    { Setting_AxisExtended0, Group_Axis0, "-axis StallGuard2 fast threshold", NULL, Format_Decimal, "-##0", "-64", "63", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #endif
-    { Setting_AxisExtended1, Group_Axis0, "?-axis hold current", "%", Format_Int8, "##0", "5", "100", Setting_NonCoreFn, set_axis_setting, get_axis_setting, NULL },
+    { Setting_AxisExtended1, Group_Axis0, "-axis hold current", "%", Format_Int8, "##0", "5", "100", Setting_NonCoreFn, set_axis_setting, get_axis_setting, NULL, AXIS_OPTS },
 #if TMC_STALLGUARD == 4
-    { Setting_AxisExtended2, Group_Axis0, "?-axis StallGuard4 slow threshold", NULL, Format_Decimal, "##0", "0", "255", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL },
+    { Setting_AxisExtended2, Group_Axis0, "-axis StallGuard4 slow threshold", NULL, Format_Decimal, "##0", "0", "255", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #else
-    { Setting_AxisExtended2, Group_Axis0, "?-axis stallGuard2 slow threshold", NULL, Format_Decimal, "-##0", "-64", "63", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL },
+    { Setting_AxisExtended2, Group_Axis0, "-axis stallGuard2 slow threshold", NULL, Format_Decimal, "-##0", "-64", "63", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #endif
 };
 
@@ -559,14 +561,14 @@ static void trinamic_settings_load (void)
     settings_loaded = true;
 }
 
-static void on_settings_changed (settings_t *settings)
+static void on_settings_changed (settings_t *settings, settings_changed_flags_t changed)
 {
     static bool init_ok = false;
     static float steps_per_mm[N_AXIS];
 
     uint_fast8_t idx = N_AXIS;
 
-    settings_changed(settings);
+    settings_changed(settings, changed);
 
     if(init_ok) {
         do {
@@ -1268,8 +1270,8 @@ static void trinamic_MCodeExecute (uint_fast16_t state, parser_block_t *gc_block
             break;
     }
 
-    if(!handled && hal.user_mcode.execute)
-        hal.user_mcode.execute(state, gc_block);
+    if(!handled && user_mcode.execute)
+        user_mcode.execute(state, gc_block);
 }
 
 #if TRINAMIC_I2C
@@ -1356,25 +1358,35 @@ static float trinamic_get_homing_rate (axes_signals_t axes, homing_mode_t mode)
     if(!axes.mask /*?? || mode == HomingMode_Pulloff*/)
         return mode == HomingMode_Locate ? settings.homing.feed_rate : settings.homing.seek_rate;
 
-    float feed_rate = 0.0f;
     uint_fast8_t motor = n_motors, axis;
+    float feed_rate = 0.0f, seek_rate = 0.0f;
 
     do {
         axis = motor_map[--motor].axis;
         if(bit_istrue(axes.mask, bit(axis))) {
 
-            float rate_cfg = mode == HomingMode_Locate ? trinamic.driver[axis].homing_feed_rate : trinamic.driver[axis].homing_seek_rate;
+            float feed_rate_cfg = trinamic.driver[axis].homing_feed_rate,
+                  seek_rate_cfg = trinamic.driver[axis].homing_seek_rate;
 
-            if(feed_rate == 0.0f)
-                feed_rate = rate_cfg;
-            else if(feed_rate != rate_cfg) {
-                feed_rate = 0.0f;
+            if(feed_rate == 0.0f) {
+                feed_rate = feed_rate_cfg;
+                seek_rate = seek_rate_cfg;
+            } else if(!(feed_rate == feed_rate_cfg && seek_rate == seek_rate_cfg)) {
+                feed_rate = seek_rate = 0.0f;
+                break;
+            }
+        } else {
+            if(feed_rate == 0.0f) {
+                feed_rate = settings.homing.feed_rate;
+                seek_rate = settings.homing.seek_rate;
+            } else if(!(feed_rate == settings.homing.feed_rate && seek_rate == settings.homing.seek_rate)) {
+                feed_rate = seek_rate = 0.0f;
                 break;
             }
         }
     } while(motor);
 
-    return feed_rate;
+    return mode == HomingMode_Locate ? feed_rate : seek_rate;
 }
 
 // Enable/disable sensorless homing
@@ -1772,7 +1784,7 @@ static void onReportOptions (bool newopt)
     on_report_options(newopt);
 
     if(!newopt)
-        hal.stream.write("[PLUGIN:Trinamic v0.10]" ASCII_EOL);
+        hal.stream.write("[PLUGIN:Trinamic v0.12]" ASCII_EOL);
     else if(driver_enabled.mask) {
         hal.stream.write(",TMC=");
         hal.stream.write(uitoa(driver_enabled.mask));
