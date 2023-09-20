@@ -43,7 +43,7 @@
 #include "../trinamic/tmc5160hal.h"
 #endif
 #if TRINAMIC_ENABLE == 2660
-#define R_SENSE 100
+#define R_SENSE 50
 #include "../trinamic/tmc2660hal.h"
 #endif
 
@@ -86,7 +86,7 @@ static const TMC_chopper_timing_t chopper_timing = { .hstrt = 1, .hend = -1, .tb
 #endif
 #define TMC_X_MONITOR 1
 #ifndef TRINAMIC_DEFAULT_MICROSTEPS
-    #define TRINAMIC_DEFAULT_MICROSTEPS 16
+    #define TRINAMIC_DEFAULT_MICROSTEPS 8
 #endif
 #define TMC_X_MICROSTEPS TRINAMIC_DEFAULT_MICROSTEPS
 #define TMC_X_R_SENSE R_SENSE   // mOhm
@@ -113,7 +113,7 @@ stepper[motor]->chopper_timing(motor, chopper_timing);
 #define TMC_Y_ENABLE 1 // Do not change
 #endif
 #define TMC_Y_MONITOR 1
-#define TMC_Y_MICROSTEPS 16
+#define TMC_Y_MICROSTEPS TRINAMIC_DEFAULT_MICROSTEPS
 #define TMC_Y_R_SENSE R_SENSE   // mOhm
 
 #ifndef DEFAULT_Y_CURRENT
@@ -138,7 +138,7 @@ stepper[motor]->chopper_timing(motor, chopper_timing);
 #define TMC_Z_ENABLE 1 // Do not change
 #endif
 #define TMC_Z_MONITOR 1
-#define TMC_Z_MICROSTEPS 16
+#define TMC_Z_MICROSTEPS TRINAMIC_DEFAULT_MICROSTEPS
 #define TMC_Z_R_SENSE R_SENSE   // mOhm
 
 #ifndef DEFAULT_Z_CURRENT
