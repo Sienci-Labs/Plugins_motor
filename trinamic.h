@@ -43,8 +43,10 @@
 #include "../trinamic/tmc5160hal.h"
 #endif
 #if TRINAMIC_ENABLE == 2660
-#define R_SENSE 50
+//#define R_SENSE 50
 #include "../trinamic/tmc2660hal.h"
+//#include "../trinamic/tmc2660.h"
+#define R_SENSE 50
 #endif
 
 #ifndef TMC_POLL_STALLED
