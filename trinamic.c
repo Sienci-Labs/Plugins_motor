@@ -65,7 +65,10 @@ static trinamic_driver_if_t driver_if = {0};
 static trinamic_settings_t trinamic;
 
 static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
-#define TRINAMIC_STATUS_DELAY 10000
+#if BOARD_LONGBOARD32
+#define TRINAMIC_STATUS_DELAY 200
+static TMC_drv_status_t status[4];
+#endif
 
 static struct {
     bool raw;
@@ -604,27 +607,95 @@ static void pos_failed (sys_state_t state)
     report_message("Could not communicate with stepper driver!", Message_Warning);
 }
 
+static void poll_report (sys_state_t state)
+{
+    uint_fast8_t motor = 0;
+
+        while(motor<n_motors) {
+        if(status[motor].stst){
+            hal.stream.write("[STST:");
+            hal.stream.write(uitoa(motor));
+            hal.stream.write("]" ASCII_EOL);
+        }
+
+        if(status[motor].stallguard){
+            strcpy(sbuf, "SG:M ");
+            strcat(sbuf, uitoa(motor));
+            report_message(sbuf, Message_Warning);            
+        }
+
+        if(status[motor].otpw){
+            strcpy(sbuf, "Over-Temperature Motor: ");
+            strcat(sbuf, uitoa(motor));
+            report_message(sbuf, Message_Warning);   
+        }        
+        motor++;
+    } 
+
+}
+
 static void trinamic_poll (void)
 {
     static uint32_t last_ms = 0;
-    static int i;
-    static uint32_t statusbyte[4];
-
+    uint_fast8_t motor = 0;
     uint32_t ms = hal.get_elapsed_ticks();
+    uint8_t stall_fault, otpw_fault;
+    static bool error_active = false;
 
     if(ms < last_ms + TRINAMIC_STATUS_DELAY) // check once every update period
-        return;
-        
-    //check the overtemp and alarm if out of range.
-    for (i=0; i<n_motors; i++){
-        statusbyte[i] = TMC2660_getAlarmStatus(i);            
+        return;        
+    
+    while(motor<n_motors) {
+        status[motor] = stepper[motor]->get_drv_status(motor);
+        motor++;
     }
 
-    char msg[128];
-    sprintf(msg, "m1s %lu m2s %lu m3s %lu m4s %lu", statusbyte[0], statusbyte[1], statusbyte[2], statusbyte[3]);   
-    report_message(msg, Message_Warning); 
+    //check overtemp
+    motor = 0;
+    otpw_fault = 0;
+    while(motor<n_motors) {
+        if(status[motor].otpw){
+            otpw_fault |= (1 << motor);
+        }     
+        motor++;
+    }    
+    //check stallguard
+    motor = 0;
+    stall_fault = 0;
+    while(motor<n_motors) {
+        if(status[motor].stallguard){ 
+            //stall_fault |= (1 << motor);                
+        }
+        motor++;
+    }
 
-    //check for motor stalls
+    if (stall_fault || otpw_fault){
+        if(!error_active){
+            error_active = true;
+            grbl.enqueue_realtime_command(CMD_STOP);          
+            grbl.enqueue_realtime_command(CMD_FEED_HOLD);
+            settings.steppers.deenergize.value = 0;
+            st_go_idle();
+            protocol_enqueue_rt_command(poll_report);
+        }
+    }    
+
+    //check STST
+    motor = 0;
+    while(motor<n_motors) {
+        if(status[motor].stst){
+
+        }
+    motor++;
+    }
+
+    //error has been recovered
+    if (error_active){
+        if((stall_fault==0) && (otpw_fault==0)){
+            error_active = false;
+            //need to recover engerize state.
+        }
+    } 
     last_ms = ms;
 }
 
