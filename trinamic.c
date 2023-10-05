@@ -68,9 +68,6 @@ static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
 #if BOARD_LONGBOARD32
 #define TRINAMIC_STATUS_DELAY 100
 static TMC_drv_status_t status[4];
-
-static volatile axes_signals_t stst_axes;
-
 #endif
 
 static struct {
@@ -656,8 +653,9 @@ static void poll_report (sys_state_t state)
 static void trinamic_poll (void)
 {
     static uint32_t last_ms = 0;
+    static uint_fast16_t error_count = 0;
     uint_fast8_t motor = 0;
-    uint_fast16_t axis, error_count;
+    uint_fast16_t axis;
     uint32_t ms = hal.get_elapsed_ticks();
     uint8_t stall_fault, otpw_fault;
     static bool error_active = false;
@@ -709,7 +707,6 @@ static void trinamic_poll (void)
         if(status[motor].stst){
             //if the stst bit is set then lower the currrent by the standstill setting amount and set a flag that the axis is in STST
                 if(stepper[motor]&& (axis = motor_map[motor].axis)){
-                    stst_axes.value |= 1<<axis;
                     stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
                 }          
         }
@@ -751,11 +748,11 @@ static void stst_pulse_start (stepper_t *motors)
         if(status[motor].stst){ 
             //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
                 if((axis = motor_map[motor].axis) && motors->step_outbits.mask &(1<<axis)){
-                    stst_axes.value &= ~(1 << axis);
                     stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                    status[motor].stst = 0;
                 }          
         }
-    motor++;
+        motor++;
     }
 
     stst_stepper_pulse_start(motors);
