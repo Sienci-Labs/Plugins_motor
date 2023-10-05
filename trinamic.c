@@ -54,7 +54,7 @@ static axes_signals_t homing = {0}, otpw_triggered = {0}, driver_enabled = {0};
 static limits_get_state_ptr limits_get_state = NULL;
 #endif
 static limits_enable_ptr limits_enable = NULL;
-static stepper_pulse_start_ptr hal_stepper_pulse_start = NULL;
+static stepper_pulse_start_ptr hal_stepper_pulse_start = NULL, stst_stepper_pulse_start = NULL;
 static nvs_address_t nvs_address;
 static on_realtime_report_ptr on_realtime_report;
 static on_report_options_ptr on_report_options;
@@ -66,8 +66,11 @@ static trinamic_settings_t trinamic;
 
 static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
 #if BOARD_LONGBOARD32
-#define TRINAMIC_STATUS_DELAY 200
+#define TRINAMIC_STATUS_DELAY 100
 static TMC_drv_status_t status[4];
+
+static volatile axes_signals_t stst_axes;
+
 #endif
 
 static struct {
@@ -610,19 +613,35 @@ static void pos_failed (sys_state_t state)
 static void poll_report (sys_state_t state)
 {
     uint_fast8_t motor = 0;
+    uint_fast16_t axis;
+
+                if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis)
+                    stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
 
         while(motor<n_motors) {
         if(status[motor].stst){
-            hal.stream.write("[STST:");
-            hal.stream.write(uitoa(motor));
-            hal.stream.write("]" ASCII_EOL);
+                if(stepper[motor]){
+                    //stepper[motor]->set_current(motor, (trinamic.driver[axis].current)*1/trinamic.driver[axis].hold_current_pct, trinamic.driver[axis].hold_current_pct);                            
+                    axis = stepper[motor]->get_config(motor)->motor.axis;
+                    hal.stream.write("[MOST:");
+                    hal.stream.write(uitoa(axis));
+                    //hal.stream.write("]" ASCII_EOL);
+                    hal.stream.write("[CURR:");
+                    hal.stream.write(uitoa((trinamic.driver[axis].current)));
+                    //hal.stream.write("]" ASCII_EOL); 
+                    //hal.delay_ms(15, NULL);                   
+                    hal.stream.write("[STST:");
+                    hal.stream.write(uitoa((trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100));
+                    hal.stream.write("]" ASCII_EOL);
+                    //hal.delay_ms(15, NULL);
+                }         
         }
 
-        if(status[motor].stallguard){
+        /*if(status[motor].stallguard){
             strcpy(sbuf, "SG:M ");
             strcat(sbuf, uitoa(motor));
             report_message(sbuf, Message_Warning);            
-        }
+        }*/
 
         if(status[motor].otpw){
             strcpy(sbuf, "Over-Temperature Motor: ");
@@ -638,6 +657,7 @@ static void trinamic_poll (void)
 {
     static uint32_t last_ms = 0;
     uint_fast8_t motor = 0;
+    uint_fast16_t axis;
     uint32_t ms = hal.get_elapsed_ticks();
     uint8_t stall_fault, otpw_fault;
     static bool error_active = false;
@@ -660,14 +680,14 @@ static void trinamic_poll (void)
         motor++;
     }    
     //check stallguard
-    motor = 0;
     stall_fault = 0;
+    /*motor = 0;
     while(motor<n_motors) {
         if(status[motor].stallguard){ 
             //stall_fault |= (1 << motor);                
         }
         motor++;
-    }
+    }*/
 
     if (stall_fault || otpw_fault){
         if(!error_active){
@@ -684,10 +704,17 @@ static void trinamic_poll (void)
     motor = 0;
     while(motor<n_motors) {
         if(status[motor].stst){
-
+            //if the stst bit is set then lower the currrent by the standstill setting amount and set a flag that the axis is in STST
+                if(stepper[motor]&& (axis = motor_map[motor].axis)){
+                    stst_axes.value |= 1<<axis;
+                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
+                }          
         }
     motor++;
     }
+
+    if (stst_axes.value)
+        protocol_enqueue_rt_command(poll_report);
 
     //error has been recovered
     if (error_active){
@@ -711,6 +738,26 @@ static void trinamic_poll_delay (sys_state_t grbl_state)
     on_execute_delay(grbl_state);
 
     trinamic_poll();
+}
+
+static void stst_pulse_start (stepper_t *motors)
+{
+    uint_fast8_t motor = 0;
+    uint_fast16_t axis;
+
+    motor = 0;
+    while(motor<n_motors) {
+        if(status[motor].stst){ 
+            //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
+                if((axis = motor_map[motor].axis) && motors->step_outbits.mask &(1<<axis)){
+                    stst_axes.value &= ~(1 << axis);
+                    stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                }          
+        }
+    motor++;
+    }
+
+    stst_stepper_pulse_start(motors);
 }
 
 static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
@@ -852,12 +899,20 @@ static void trinamic_drivers_init (axes_signals_t axes)
         driver_enabled.mask = 0;
         memset(stepper, 0, sizeof(stepper));
     } else{
+        #if BOARD_LONGBOARD32
         //on successful init, enable monitoring.        
         on_execute_realtime = grbl.on_execute_realtime;
         grbl.on_execute_realtime = trinamic_poll_realtime;
 
         on_execute_delay = grbl.on_execute_delay;
         grbl.on_execute_delay = trinamic_poll_delay;
+
+        //on successful init, enable STST reduction
+        if(stst_stepper_pulse_start == NULL) {
+        stst_stepper_pulse_start = hal.stepper.pulse_start;
+        hal.stepper.pulse_start = stst_pulse_start;
+        }
+        #endif
     }
 }
 
