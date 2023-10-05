@@ -657,7 +657,7 @@ static void trinamic_poll (void)
 {
     static uint32_t last_ms = 0;
     uint_fast8_t motor = 0;
-    uint_fast16_t axis;
+    uint_fast16_t axis, error_count;
     uint32_t ms = hal.get_elapsed_ticks();
     uint8_t stall_fault, otpw_fault;
     static bool error_active = false;
@@ -690,7 +690,8 @@ static void trinamic_poll (void)
     }*/
 
     if (stall_fault || otpw_fault){
-        if(!error_active){
+        error_count++;
+        if(error_count > 2){
             error_active = true;
             grbl.enqueue_realtime_command(CMD_STOP);          
             grbl.enqueue_realtime_command(CMD_FEED_HOLD);
@@ -698,7 +699,9 @@ static void trinamic_poll (void)
             st_go_idle();
             protocol_enqueue_rt_command(poll_report);
         }
-    }    
+    } else{
+        error_count = 0;
+    } 
 
     //check STST
     motor = 0;
@@ -713,13 +716,11 @@ static void trinamic_poll (void)
     motor++;
     }
 
-    if (stst_axes.value)
-        protocol_enqueue_rt_command(poll_report);
-
     //error has been recovered
     if (error_active){
         if((stall_fault==0) && (otpw_fault==0)){
             error_active = false;
+            error_count = 0;
             //need to recover engerize state.
         }
     } 
