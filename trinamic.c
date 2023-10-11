@@ -612,13 +612,9 @@ static void poll_report (sys_state_t state)
     uint_fast8_t motor = 0;
     uint_fast16_t axis;
 
-                if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis)
-                    stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
-
         while(motor<n_motors) {
         if(status[motor].stst){
-                if(stepper[motor]){
-                    //stepper[motor]->set_current(motor, (trinamic.driver[axis].current)*1/trinamic.driver[axis].hold_current_pct, trinamic.driver[axis].hold_current_pct);                            
+                if(stepper[motor]){                            
                     axis = stepper[motor]->get_config(motor)->motor.axis;
                     hal.stream.write("[MOST:");
                     hal.stream.write(uitoa(axis));
@@ -627,9 +623,9 @@ static void poll_report (sys_state_t state)
                     hal.stream.write(uitoa((trinamic.driver[axis].current)));
                     //hal.stream.write("]" ASCII_EOL); 
                     //hal.delay_ms(15, NULL);                   
-                    hal.stream.write("[STST:");
+                    hal.stream.write("[STCR:");
                     hal.stream.write(uitoa((trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100));
-                    hal.stream.write("]" ASCII_EOL);
+                    hal.stream.write("]" ASCII_EOL);              
                     //hal.delay_ms(15, NULL);
                 }         
         }
@@ -649,6 +645,8 @@ static void poll_report (sys_state_t state)
     } 
 
 }
+
+#if BOARD_LONGBOARD32
 
 static void trinamic_poll (void)
 {
@@ -705,10 +703,11 @@ static void trinamic_poll (void)
     motor = 0;
     while(motor<n_motors) {
         if(status[motor].stst){
-            //if the stst bit is set then lower the currrent by the standstill setting amount and set a flag that the axis is in STST
-                if(stepper[motor]&& (axis = motor_map[motor].axis)){
-                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
-                }          
+            //if the stst bit is set then lower the currrent by the standstill setting amount
+            if(stepper[motor]){
+                axis = motor_map[motor].axis;
+                stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);      
+            }
         }
     motor++;
     }
@@ -721,6 +720,7 @@ static void trinamic_poll (void)
             //need to recover engerize state.
         }
     } 
+    //protocol_enqueue_rt_command(poll_report);
     last_ms = ms;
 }
 
@@ -740,14 +740,15 @@ static void trinamic_poll_delay (sys_state_t grbl_state)
 
 static void stst_pulse_start (stepper_t *motors)
 {
-    uint_fast8_t motor = 0;
+    uint_fast8_t motor;
     uint_fast16_t axis;
 
     motor = 0;
     while(motor<n_motors) {
         if(status[motor].stst){ 
             //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
-                if((axis = motor_map[motor].axis) && motors->step_outbits.mask &(1<<axis)){
+                axis = motor_map[motor].axis;
+                if(motors->step_outbits.mask &(1<<axis)){
                     stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
                     status[motor].stst = 0;
                 }          
@@ -757,6 +758,8 @@ static void stst_pulse_start (stepper_t *motors)
 
     stst_stepper_pulse_start(motors);
 }
+
+#endif //longboard specific code
 
 static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
 {
