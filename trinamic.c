@@ -66,7 +66,9 @@ static trinamic_settings_t trinamic;
 
 static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
 #if BOARD_LONGBOARD32
+#ifndef TRINAMIC_STATUS_DELAY
 #define TRINAMIC_STATUS_DELAY 100
+#endif
 static TMC_drv_status_t status[4];
 #endif
 
@@ -662,7 +664,8 @@ static void trinamic_poll (void)
         return;        
     
     while(motor<n_motors) {
-        status[motor] = stepper[motor]->get_drv_status(motor);
+        if(stepper[motor]->get_drv_status)
+            status[motor] = stepper[motor]->get_drv_status(motor);
         motor++;
     }
 
@@ -706,7 +709,8 @@ static void trinamic_poll (void)
             //if the stst bit is set then lower the currrent by the standstill setting amount
             if(stepper[motor]){
                 axis = motor_map[motor].axis;
-                stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);      
+                if( stepper[motor]->set_current)
+                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);      
             }
         }
     motor++;
@@ -749,7 +753,8 @@ static void stst_pulse_start (stepper_t *motors)
             //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
                 axis = motor_map[motor].axis;
                 if(motors->step_outbits.mask &(1<<axis)){
-                    stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                    if(stepper[motor]->set_current)
+                        stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
                     status[motor].stst = 0;
                 }          
         }

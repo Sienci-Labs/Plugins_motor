@@ -82,7 +82,9 @@ static const TMC_chopper_timing_t chopper_timing = { .hstrt = 1, .hend = -1, .tb
 
 // General
 #if TRINAMIC_MIXED_DRIVERS
+#ifndef TMC_X_ENABLE
 #define TMC_X_ENABLE 0
+#endif
 #else
 #define TMC_X_ENABLE 1 // Do not change
 #endif
@@ -110,7 +112,9 @@ stepper[motor]->coolconf(motor, coolconf); \
 stepper[motor]->chopper_timing(motor, chopper_timing);
 
 #if TRINAMIC_MIXED_DRIVERS
+#ifndef TMC_Y_ENABLE
 #define TMC_Y_ENABLE 0
+#endif
 #else
 #define TMC_Y_ENABLE 1 // Do not change
 #endif
@@ -135,7 +139,9 @@ stepper[motor]->coolconf(motor, coolconf); \
 stepper[motor]->chopper_timing(motor, chopper_timing);
 
 #if TRINAMIC_MIXED_DRIVERS
+#ifndef TMC_Z_ENABLE
 #define TMC_Z_ENABLE 0
+#endif
 #else
 #define TMC_Z_ENABLE 1 // Do not change
 #endif
@@ -162,7 +168,9 @@ stepper[motor]->chopper_timing(motor, chopper_timing);
 #ifdef A_AXIS
 
 #if TRINAMIC_MIXED_DRIVERS
+#ifndef TMC_A_ENABLE
 #define TMC_A_ENABLE 0
+#endif
 #else
 #define TMC_A_ENABLE 1 // Do not change
 #endif
@@ -191,7 +199,9 @@ stepper[motor]->chopper_timing(motor, chopper_timing);
 #ifdef B_AXIS
 
 #if TRINAMIC_MIXED_DRIVERS
+#ifndef TMC_B_ENABLE
 #define TMC_B_ENABLE 0
+#endif
 #else
 #define TMC_B_ENABLE 1 // Do not change
 #endif
