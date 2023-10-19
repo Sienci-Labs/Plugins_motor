@@ -67,9 +67,10 @@ static trinamic_settings_t trinamic;
 static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
 #if BOARD_LONGBOARD32
 #ifndef TRINAMIC_STATUS_DELAY
-#define TRINAMIC_STATUS_DELAY 100
+#define TRINAMIC_STATUS_DELAY 254
+#define STST_REDUCTION 1
 #endif
-static TMC_drv_status_t status[4];
+static TMC_drv_status_t status[5];
 #endif
 
 static struct {
@@ -569,45 +570,14 @@ static void trinamic_settings_load (void)
     settings_loaded = true;
 }
 
-static void on_settings_changed (settings_t *settings, settings_changed_flags_t changed)
-{
-    static bool init_ok = false;
-    static float steps_per_mm[N_AXIS];
-
-    uint_fast8_t idx = N_AXIS;
-
-    settings_changed(settings, changed);
-
-    if(init_ok) {
-        do {
-            idx--;
-            if(steps_per_mm[idx] != settings->axis[idx].steps_per_mm) {
-                steps_per_mm[idx] = settings->axis[idx].steps_per_mm;
-#if PWM_THRESHOLD_VELOCITY > 0
-                uint8_t motor = n_motors;
-                do {
-                    motor--;
-                    if(bit_istrue(driver_enabled.mask, bit(idx)) && idx == motor_map[motor].axis)
-                        stepper[motor]->set_tpwmthrs(motor, (float)PWM_THRESHOLD_VELOCITY / 60.0f, steps_per_mm[idx]);
-                } while(motor);
-#endif
-            }
-        } while(idx);
-    } else {
-        init_ok = true;
-        do {
-            idx--;
-            steps_per_mm[idx] = settings->axis[idx].steps_per_mm;
-        } while(idx);
-    }
-}
-
 #endif // End region settings
 
 static void pos_failed (sys_state_t state)
 {
     report_message("Could not communicate with stepper driver!", Message_Warning);
 }
+
+#if BOARD_LONGBOARD32
 
 static void poll_report (sys_state_t state)
 {
@@ -647,8 +617,6 @@ static void poll_report (sys_state_t state)
     } 
 
 }
-
-#if BOARD_LONGBOARD32
 
 static void trinamic_poll (void)
 {
@@ -709,8 +677,10 @@ static void trinamic_poll (void)
             //if the stst bit is set then lower the currrent by the standstill setting amount
             if(stepper[motor]){
                 axis = motor_map[motor].axis;
+                #if (STST_REDUCTION)
                 if( stepper[motor]->set_current)
-                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);      
+                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
+                #endif     
             }
         }
     motor++;
@@ -765,6 +735,51 @@ static void stst_pulse_start (stepper_t *motors)
 }
 
 #endif //longboard specific code
+
+static void on_settings_changed (settings_t *settings, settings_changed_flags_t changed)
+{
+    static bool init_ok = false;
+    static float steps_per_mm[N_AXIS];
+
+    uint_fast8_t idx = N_AXIS;
+
+    settings_changed(settings, changed);
+
+    if(init_ok) {
+        do {
+            idx--;
+            if(steps_per_mm[idx] != settings->axis[idx].steps_per_mm) {
+                steps_per_mm[idx] = settings->axis[idx].steps_per_mm;
+#if PWM_THRESHOLD_VELOCITY > 0
+                uint8_t motor = n_motors;
+                do {
+                    motor--;
+                    if(bit_istrue(driver_enabled.mask, bit(idx)) && idx == motor_map[motor].axis)
+                        stepper[motor]->set_tpwmthrs(motor, (float)PWM_THRESHOLD_VELOCITY / 60.0f, steps_per_mm[idx]);
+                } while(motor);
+#endif
+            }
+        } while(idx);
+    } else {
+        init_ok = true;
+        do {
+            idx--;
+            steps_per_mm[idx] = settings->axis[idx].steps_per_mm;
+        } while(idx);
+    }
+
+#if BOARD_LONGBOARD32
+    //pulse start pointer gets reset on settings change, need to restore.
+    #if (STST_REDUCTION)
+        if(hal.stepper.pulse_start == stst_stepper_pulse_start) {
+            stst_stepper_pulse_start = hal.stepper.pulse_start;
+            hal.stepper.pulse_start = stst_pulse_start;
+        }
+    #endif    
+
+#endif
+
+}
 
 static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
 {
@@ -905,7 +920,7 @@ static void trinamic_drivers_init (axes_signals_t axes)
         driver_enabled.mask = 0;
         memset(stepper, 0, sizeof(stepper));
     } else{
-        #if BOARD_LONGBOARD32
+#if BOARD_LONGBOARD32
         //on successful init, enable monitoring.        
         on_execute_realtime = grbl.on_execute_realtime;
         grbl.on_execute_realtime = trinamic_poll_realtime;
@@ -914,11 +929,13 @@ static void trinamic_drivers_init (axes_signals_t axes)
         grbl.on_execute_delay = trinamic_poll_delay;
 
         //on successful init, enable STST reduction
+        #if (STST_REDUCTION)
         if(stst_stepper_pulse_start == NULL) {
-        stst_stepper_pulse_start = hal.stepper.pulse_start;
-        hal.stepper.pulse_start = stst_pulse_start;
+            stst_stepper_pulse_start = hal.stepper.pulse_start;
+            hal.stepper.pulse_start = stst_pulse_start;
         }
         #endif
+#endif
     }
 }
 

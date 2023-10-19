@@ -101,7 +101,7 @@ static const TMC_chopper_timing_t chopper_timing = { .hstrt = 1, .hend = -1, .tb
 #define TMC_X_CURRENT DEFAULT_X_CURRENT       // mA RMS
 #endif 
 
-#define TMC_X_HOLD_CURRENT_PCT 50
+#define TMC_X_HOLD_CURRENT_PCT 10
 #define TMC_X_HOMING_SEEK_SGT 22
 #define TMC_X_HOMING_FEED_SGT 22
 #define TMC_X_STEALTHCHOP TMC_STEALTHCHOP
@@ -128,7 +128,7 @@ stepper[motor]->chopper_timing(motor, chopper_timing);
 #define TMC_Y_CURRENT DEFAULT_Y_CURRENT       // mA RMS
 #endif
 
-#define TMC_Y_HOLD_CURRENT_PCT 50
+#define TMC_Y_HOLD_CURRENT_PCT 10
 #define TMC_Y_HOMING_SEEK_SGT 22
 #define TMC_Y_HOMING_FEED_SGT 22
 #define TMC_Y_STEALTHCHOP TMC_STEALTHCHOP
@@ -155,7 +155,7 @@ stepper[motor]->chopper_timing(motor, chopper_timing);
 #define TMC_Z_CURRENT DEFAULT_Z_CURRENT       // mA RMS
 #endif
 
-#define TMC_Z_HOLD_CURRENT_PCT 50
+#define TMC_Z_HOLD_CURRENT_PCT 10
 #define TMC_Z_HOMING_SEEK_SGT 22
 #define TMC_Z_HOMING_FEED_SGT 22
 #define TMC_Z_STEALTHCHOP TMC_STEALTHCHOP
