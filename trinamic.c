@@ -1891,10 +1891,18 @@ static void write_debug_report (uint_fast8_t axes)
         write_line(sbuf);
 
         sprintf(sbuf, "%-15s", "Stallguard thrs");
+
+        #if BOARD_LONGBOARD32
+        for(motor = 0; motor < n_motors; motor++) {
+            //if(bit_istrue(axes, bit(motor_map[motor].axis)))
+                sprintf(append(sbuf), "%8d", stepper[motor]->get_sg_stall_value(motor));
+        }
+        #else
         for(motor = 0; motor < n_motors; motor++) {
             if(bit_istrue(axes, bit(motor_map[motor].axis)))
                 sprintf(append(sbuf), "%8d", stepper[motor]->get_sg_stall_value(motor));
         }
+        #endif
         write_line(sbuf);
 
         hal.stream.write("DRIVER STATUS:" ASCII_EOL);

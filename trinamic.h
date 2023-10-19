@@ -73,9 +73,18 @@
 
 //#define TMC_HOMING_ACCELERATION 50.0f // NOT tested... Reduce acceleration during homing to avoid falsely triggering DIAG output
 
+
+
+#if TRINAMIC_ENABLE == 2660
+static const TMC_coolconf_t coolconf = { .semin = TMC2660_SEMIN, .semax = TMC2660_SEMAX, .sedn = TMC2660_SEDN };
+#else
 static const TMC_coolconf_t coolconf = { .semin = 5, .semax = 2, .sedn = 1 };
+#endif
+
 #if TRINAMIC_ENABLE == 2209
 static const TMC_chopper_timing_t chopper_timing = { .hstrt = 1, .hend = -1, .tbl = 1, .toff = 3 };
+#elif TRINAMIC_ENABLE == 2660
+static const TMC_chopper_timing_t chopper_timing = { .hstrt = TMC2660_HSTR, .hend = TMC2660_HEND, .tbl = TMC2660_BLANK_TIME, .toff = TMC2660_CONSTANT_OFF_TIME };
 #else
 static const TMC_chopper_timing_t chopper_timing = { .hstrt = 1, .hend = -1, .tbl = 1, .toff = 5 };
 #endif
