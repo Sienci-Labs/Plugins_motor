@@ -671,6 +671,7 @@ static void trinamic_poll (void)
     } 
 
     //check STST
+    #if (DYNAMIC_STST)
     motor = 0;
     while(motor<n_motors) {
         if(status[motor].stst){
@@ -685,6 +686,7 @@ static void trinamic_poll (void)
         }
     motor++;
     }
+    #endif
 
     //error has been recovered
     if (error_active){
@@ -716,7 +718,7 @@ static void stst_pulse_start (stepper_t *motors)
 {
     uint_fast8_t motor;
     uint_fast16_t axis;
-
+#if(DYNAMIC_STST)
     motor = 0;
     while(motor<n_motors) {
         if(status[motor].stst){ 
@@ -730,6 +732,7 @@ static void stst_pulse_start (stepper_t *motors)
         }
         motor++;
     }
+#endif
 
     stst_stepper_pulse_start(motors);
 }
