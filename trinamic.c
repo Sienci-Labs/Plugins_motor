@@ -821,7 +821,14 @@ static void on_settings_changed (settings_t *settings, settings_changed_flags_t 
             stst_stepper_pulse_start = hal.stepper.pulse_start;
             hal.stepper.pulse_start = stst_pulse_start;
         }
-    #endif    
+    #endif
+    
+    uint_fast8_t motor = 0;
+    while(motor<n_motors) {
+        if(stepper[motor]->update_settings)
+            stepper[motor]->update_settings(motor, &trinamic.tmc2660_settings);
+        motor++;
+    }      
 
 #endif
 
@@ -1535,19 +1542,14 @@ static void trinamic_stepper_enable (axes_signals_t enable)
 static void trinamic_stepper_enable (axes_signals_t enable)
 {
     uint_fast8_t motor = 0;
-
-    TMC2660_settings_t settings;
-
-    settings.chm = trinamic.chm;
     
     while(motor<n_motors) {
         if(stepper[motor]->update_settings)
-            stepper[motor]->update_settings(motor, trinamic);
+            stepper[motor]->update_settings(motor, &trinamic.tmc2660_settings);
         motor++;
     }
 
 }
-
 #endif
 
 #if TMC_POLL_STALLED
