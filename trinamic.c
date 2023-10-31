@@ -71,6 +71,9 @@ static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
 #define STST_REDUCTION 1
 #endif
 static TMC_drv_status_t status[5];
+
+static stepper_enable_ptr stepper_enable = NULL;
+
 #endif
 
 static struct {
@@ -118,6 +121,10 @@ static float get_axis_setting_float (setting_id_t setting);
 static status_code_t set_driver_enable (setting_id_t id, uint_fast16_t value);
 static uint32_t get_driver_enable (setting_id_t setting);
 #endif
+#if (0)
+static status_code_t set_tmc2660_setting (setting_id_t setting, uint_fast16_t value);
+static uint32_t get_tmc2660_setting (setting_id_t setting);
+#endif
 
 #define AXIS_OPTS { .subgroups = On, .increment = 1 }
 
@@ -140,6 +147,22 @@ static const setting_detail_t trinamic_settings[] = {
     { Setting_AxisExtended2, Group_Axis0, "-axis StallGuard4 slow threshold", NULL, Format_Decimal, "##0", "0", "255", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #else
     { Setting_AxisExtended2, Group_Axis0, "-axis stallGuard2 slow threshold", NULL, Format_Decimal, "-##0", "-64", "63", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
+#endif
+#if (BOARD_LONGBOARD32)
+    { Setting_SLB32_TMC2660_toff, Group_MotorDriver, "toff", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.toff, NULL, NULL },
+    { Setting_SLB32_TMC2660_tbl, Group_MotorDriver, "tbl", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.tbl, NULL, NULL },
+    { Setting_SLB32_TMC2660_chm, Group_MotorDriver, "chm", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.chm, NULL, NULL },
+    { Setting_SLB32_TMC2660_hstr, Group_MotorDriver, "hstr", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hstr, NULL, NULL },
+    { Setting_SLB32_TMC2660_hend, Group_MotorDriver, "hend", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hend, NULL, NULL },
+    { Setting_SLB32_TMC2660_hdec, Group_MotorDriver, "hdec", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hdec, NULL, NULL },
+    { Setting_SLB32_TMC2660_rndtf, Group_MotorDriver, "rndtf", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.rndtf, NULL, NULL },
+    { Setting_SLB32_TMC2660_THRESH, Group_MotorDriver, "THRESH", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.thresh, NULL, NULL },
+    { Setting_SLB32_TMC2660_semin, Group_MotorDriver, "semin", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.semin, NULL, NULL },
+    { Setting_SLB32_TMC2660_seup, Group_MotorDriver, "seup", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.seup, NULL, NULL },
+    { Setting_SLB32_TMC2660_semax, Group_MotorDriver, "semax", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.semax, NULL, NULL },
+    { Setting_SLB32_TMC2660_sedn, Group_MotorDriver, "sedn", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.sedn, NULL, NULL },
+    { Setting_SLB32_TMC2660_seimin, Group_MotorDriver, "seimin", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.seimin, NULL, NULL },
+    { Setting_SLB32_TMC2660_drvconf, Group_MotorDriver, "drvconf_reg", NULL, Format_Integer, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.drvconf, NULL, NULL },
 #endif
 };
 
@@ -374,6 +397,23 @@ static void trinamic_settings_restore (void)
     trinamic.driver_enable.mask = driver_enabled.mask = 0;
     trinamic.homing_enable.mask = 0;
 
+    #if (BOARD_LONGBOARD32)
+        trinamic.tmc2660_settings.toff = TMC2660_CONSTANT_OFF_TIME;
+        trinamic.tmc2660_settings.tbl = TMC2660_BLANK_TIME;
+        trinamic.tmc2660_settings.chm = TMC2660_CHOPPER_MODE;
+        trinamic.tmc2660_settings.hstr = TMC2660_HSTR;
+        trinamic.tmc2660_settings.hend = TMC2660_HEND;
+        trinamic.tmc2660_settings.hdec = TMC2660_HDEC;
+        trinamic.tmc2660_settings.rndtf = TMC2660_RNDTF;
+        trinamic.tmc2660_settings.thresh = TMC2660_SG_THRESH;
+        trinamic.tmc2660_settings.semin = TMC2660_SEMIN;
+        trinamic.tmc2660_settings.seup = TMC2660_SEUP;
+        trinamic.tmc2660_settings.semax = TMC2660_SEMAX;
+        trinamic.tmc2660_settings.sedn = TMC2660_SEDN;
+        trinamic.tmc2660_settings.seimin = TMC2660_SEIMIN;
+        trinamic.tmc2660_settings.drvconf = TMC2660_DRVCONF;
+    #endif    
+
     do {
 
         switch(--idx) {
@@ -479,6 +519,7 @@ static void trinamic_settings_restore (void)
         trinamic.driver[idx].homing_feed_rate = DEFAULT_HOMING_FEED_RATE;
 
     } while(idx);
+
 
     hal.nvs.memcpy_to_nvs(nvs_address, (uint8_t *)&trinamic, sizeof(trinamic_settings_t), true);
 
@@ -733,6 +774,8 @@ static void stst_pulse_start (stepper_t *motors)
         motor++;
     }
 #endif
+
+//check stallguard pins
 
     stst_stepper_pulse_start(motors);
 }
@@ -1487,6 +1530,26 @@ static void trinamic_stepper_enable (axes_signals_t enable)
 
 #endif
 
+#if (BOARD_LONGBOARD32)
+
+static void trinamic_stepper_enable (axes_signals_t enable)
+{
+    uint_fast8_t motor = 0;
+
+    TMC2660_settings_t settings;
+
+    settings.chm = trinamic.chm;
+    
+    while(motor<n_motors) {
+        if(stepper[motor]->update_settings)
+            stepper[motor]->update_settings(motor, trinamic);
+        motor++;
+    }
+
+}
+
+#endif
+
 #if TMC_POLL_STALLED
 
 // hal.limits.get_state is redirected here when homing
@@ -2072,6 +2135,12 @@ bool trinamic_init (void)
         stepper_enable = hal.stepper.enable;
         hal.stepper.enable = trinamic_stepper_enable;
 #endif
+
+#if (BOARD_LONGBOARD32)
+        stepper_enable = hal.stepper.enable;
+        hal.stepper.enable = trinamic_stepper_enable;
+#endif
+
     }
 
     return nvs_address != 0;

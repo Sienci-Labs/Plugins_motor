@@ -283,6 +283,24 @@ typedef struct {
     axes_signals_t driver_enable;
     axes_signals_t homing_enable;
     motor_settings_t driver[N_AXIS];
+#if (BOARD_LONGBOARD32)
+
+    TMC2660_settings_t tmc2660_settings;
+    /*uint8_t toff;
+    uint8_t tbl;
+    uint8_t chm;
+    uint8_t hstr;
+    uint8_t hend;
+    uint8_t hdec;
+    uint8_t rndtf;
+    uint8_t thresh;
+    uint8_t semin;
+    uint8_t seup;
+    uint8_t semax;
+    uint8_t sedn;
+    uint8_t seimin;
+    uint32_t drvconf;*/
+#endif
 } trinamic_settings_t;
 
 typedef struct {
