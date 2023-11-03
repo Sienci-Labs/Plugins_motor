@@ -822,7 +822,7 @@ static void on_settings_changed (settings_t *settings, settings_changed_flags_t 
             hal.stepper.pulse_start = stst_pulse_start;
         }
     #endif
-    
+
     uint_fast8_t motor = 0;
     while(motor<n_motors) {
         if(stepper[motor]->update_settings)
@@ -1562,6 +1562,22 @@ static limit_signals_t trinamic_limits (void)
     signals.min.mask &= ~homing.mask;
     signals.min2.mask &= ~homing.mask;
 
+//longboard has dedicated pins, just poll those.
+#if(BOARD_LONGBOARD32)
+    if(hal.clear_bits_atomic(&diag1_poll, 0)) {
+        uint_fast8_t motor = n_motors;
+        do {
+            if(bit_istrue(homing.mask, bit(motor_map[--motor].axis))) {
+                if(stepper[motor]->get_drv_status(motor).stallguard) {
+                    if(motor == motor_map[motor].axis)
+                        bit_true(signals.min.mask, motor_map[motor].axis);
+                    else
+                        bit_true(signals.min2.mask, motor_map[motor].axis);
+                }
+            }
+        } while(motor);
+    }
+#else
     if(hal.clear_bits_atomic(&diag1_poll, 0)) {
         // TODO: read I2C bridge status register instead of polling drivers when using I2C comms
         uint_fast8_t motor = n_motors;
@@ -1576,7 +1592,7 @@ static limit_signals_t trinamic_limits (void)
             }
         } while(motor);
     }
-
+#endif
     return signals;
 }
 
