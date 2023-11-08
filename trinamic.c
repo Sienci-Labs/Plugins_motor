@@ -186,6 +186,22 @@ static const setting_descr_t trinamic_settings_descr[] = {
     { Setting_AxisHomingSeekRate, "Seek rate to quickly find the limit switch before the slower locating phase.\\n"
                                   "NOTE: only used for axes with Trinamic driver enabled, others use the $25 setting."
     },
+#if (BOARD_LONGBOARD32)
+    { Setting_SLB32_TMC2660_toff, "toff: 1 - 15, 0 = driver disabled" },
+    { Setting_SLB32_TMC2660_tbl, "tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks" },
+    { Setting_SLB32_TMC2660_chm, "chm: 0 = spreadCycle, 1 = constant off time" },
+    { Setting_SLB32_TMC2660_hstr, "hstr: 0 - 7" },
+    { Setting_SLB32_TMC2660_hend, "hend: 3 - 12" },
+    { Setting_SLB32_TMC2660_hdec, "Hysteresis decrement: 0 16 clocks" },
+    { Setting_SLB32_TMC2660_rndtf, "Random off time" },
+    { Setting_SLB32_TMC2660_THRESH, "Stallguard threshold" },
+    { Setting_SLB32_TMC2660_semin, "0 = Coolstep disabled" },
+    { Setting_SLB32_TMC2660_seup, "0 - 3 (1 - 8)" },
+    { Setting_SLB32_TMC2660_semax, "0 - 15" },
+    { Setting_SLB32_TMC2660_sedn, "0 - 15" },
+    { Setting_SLB32_TMC2660_seimin, "0 = 1/2 of CS, 1 = 1/4 of CS" },
+    { Setting_SLB32_TMC2660_drvconf, "DRVCONF Register defaults 0xA31F. All protections enabled." },       
+#endif
 };
 
 #endif
@@ -720,8 +736,10 @@ static void trinamic_poll (void)
             if(stepper[motor]){
                 axis = motor_map[motor].axis;
                 #if (STST_REDUCTION)
-                if( stepper[motor]->set_current)
-                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
+                if(trinamic.driver[axis].hold_current_pct != 100){
+                    if( stepper[motor]->set_current)
+                        stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
+                }
                 #endif     
             }
         }
@@ -765,11 +783,13 @@ static void stst_pulse_start (stepper_t *motors)
         if(status[motor].stst){ 
             //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
                 axis = motor_map[motor].axis;
-                if(motors->step_outbits.mask &(1<<axis)){
-                    if(stepper[motor]->set_current)
-                        stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
-                    status[motor].stst = 0;
-                }          
+                if (trinamic.driver[axis].hold_current_pct != 100){
+                    if(motors->step_outbits.mask &(1<<axis)){
+                        if(stepper[motor]->set_current)
+                            stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                        status[motor].stst = 0;
+                    }
+                }       
         }
         motor++;
     }
