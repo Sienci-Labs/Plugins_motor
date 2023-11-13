@@ -719,7 +719,7 @@ static void trinamic_poll (void)
             error_active = true;
             grbl.enqueue_realtime_command(CMD_STOP);          
             grbl.enqueue_realtime_command(CMD_FEED_HOLD);
-            settings.steppers.deenergize.value = 0;
+            //settings.steppers.deenergize.value = 0;
             st_go_idle();
             protocol_enqueue_rt_command(poll_report);
         }
@@ -782,14 +782,14 @@ static void stst_pulse_start (stepper_t *motors)
     while(motor<n_motors) {
         if(status[motor].stst){ 
             //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
-                axis = motor_map[motor].axis;
-                if (trinamic.driver[axis].hold_current_pct != 100){
-                    if(motors->step_outbits.mask &(1<<axis)){
-                        if(stepper[motor]->set_current)
-                            stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
-                        status[motor].stst = 0;
-                    }
-                }       
+            axis = motor_map[motor].axis;
+            if (trinamic.driver[axis].hold_current_pct != 100){
+                if(motors->step_outbits.mask &(1<<axis)){
+                    if(stepper[motor]->set_current)
+                        stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                    status[motor].stst = 0;
+                }
+            }       
         }
         motor++;
     }
