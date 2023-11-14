@@ -69,10 +69,15 @@ static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
 #ifndef TRINAMIC_STATUS_DELAY
 #define TRINAMIC_STATUS_DELAY 254
 #define STST_REDUCTION 1
+
+static uint32_t last_ms = 0;
+static stepper_t * st;  //storage for stepper data
+
 #endif
 static TMC_drv_status_t status[5];
 
 static stepper_enable_ptr stepper_enable = NULL;
+static sys_state_t current_state;           // For storing the current state from sys.state via state_get()
 
 #endif
 
@@ -677,7 +682,7 @@ static void poll_report (sys_state_t state)
 
 static void trinamic_poll (void)
 {
-    static uint32_t last_ms = 0;
+
     static uint_fast16_t error_count = 0;
     uint_fast8_t motor = 0;
     uint_fast16_t axis;
@@ -686,12 +691,17 @@ static void trinamic_poll (void)
     static bool error_active = false;
 
     if(ms < last_ms + TRINAMIC_STATUS_DELAY) // check once every update period
-        return;        
+        return;
+
+    current_state = state_get();
     
-    while(motor<n_motors) {
-        if(stepper[motor]->get_drv_status)
-            status[motor] = stepper[motor]->get_drv_status(motor);
-        motor++;
+    if(current_state == STATE_IDLE){
+        while(motor<n_motors) {
+            if(stepper[motor]->get_drv_status){
+                status[motor] = stepper[motor]->get_drv_status(motor);
+            }
+            motor++;
+        }
     }
 
     //check overtemp
@@ -730,20 +740,18 @@ static void trinamic_poll (void)
     //check STST
     #if (DYNAMIC_STST)
     motor = 0;
-    while(motor<n_motors) {
-        if(status[motor].stst){
-            //if the stst bit is set then lower the currrent by the standstill setting amount
+    if(current_state == STATE_IDLE){    
+        while(motor<n_motors) {
             if(stepper[motor]){
                 axis = motor_map[motor].axis;
-                #if (STST_REDUCTION)
                 if(trinamic.driver[axis].hold_current_pct != 100){
-                    if( stepper[motor]->set_current)
+                    if( stepper[motor]->set_current){
                         stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
-                }
-                #endif     
-            }
+                    }
+                }    
+            }            
+        motor++;
         }
-    motor++;
     }
     #endif
 
@@ -773,28 +781,45 @@ static void trinamic_poll_delay (sys_state_t grbl_state)
     trinamic_poll();
 }
 
-static void stst_pulse_start (stepper_t *motors)
-{
-    uint_fast8_t motor;
-    uint_fast16_t axis;
-#if(DYNAMIC_STST)
-    motor = 0;
+static void set_stst_for_block(sys_state_t grbl_state){
+
+    uint_fast8_t motor = 0;
+    uint_fast16_t axis = 0;
+    
     while(motor<n_motors) {
-        if(status[motor].stst){ 
-            //if the stst bit is set for a motor, check to see if that motor is about to step, if it is, set the current.
-            axis = motor_map[motor].axis;
-            if (trinamic.driver[axis].hold_current_pct != 100){
-                if(motors->step_outbits.mask &(1<<axis)){
-                    if(stepper[motor]->set_current)
-                        stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
-                    status[motor].stst = 0;
-                }
-            }       
-        }
+        axis = motor_map[motor].axis;
+        if(st->steps[axis]){
+            if(stepper[motor]->set_current){
+                stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+            }
+        } else{
+            if(stepper[motor]->set_current){
+                stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
+            }
+        }               
         motor++;
     }
-#endif
 
+    motor = 0;
+    /*while(motor<n_motors) {
+        if(stepper[motor]->get_drv_status){
+            status[motor] = stepper[motor]->get_drv_status(motor);
+        }
+    motor++;
+    }  */  
+
+    //last_ms = hal.get_elapsed_ticks();
+}
+
+static void stst_pulse_start (stepper_t *motors)
+{
+#if(DYNAMIC_STST)
+    
+    if (motors->new_block){
+        st = motors; //reference the current block
+        protocol_enqueue_rt_command(set_stst_for_block); //enqueue the command to set currents.
+    }
+#endif
 //check stallguard pins
 
     stst_stepper_pulse_start(motors);
