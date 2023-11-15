@@ -740,7 +740,7 @@ static void trinamic_poll (void)
     //check STST
     #if (DYNAMIC_STST)
     motor = 0;
-    if(current_state == STATE_IDLE){    
+    if((current_state == STATE_IDLE) || (current_state == STATE_ALARM)){    
         while(motor<n_motors) {
             if(stepper[motor]){
                 axis = motor_map[motor].axis;
@@ -801,14 +801,29 @@ static void set_stst_for_block(sys_state_t grbl_state){
     }
 
     motor = 0;
-    /*while(motor<n_motors) {
+    while(motor<n_motors) {
         if(stepper[motor]->get_drv_status){
             status[motor] = stepper[motor]->get_drv_status(motor);
         }
     motor++;
-    }  */  
+    }    
 
     //last_ms = hal.get_elapsed_ticks();
+}
+
+static void set_stst_for_homing(){
+
+    uint_fast8_t motor = 0;
+    uint_fast16_t axis = 0;
+    
+    while(motor<n_motors) {
+        axis = motor_map[motor].axis;
+        if(stepper[motor]->set_current){
+            stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+        }               
+        motor++;
+    }
+    last_ms = hal.get_elapsed_ticks() + 10000;
 }
 
 static void stst_pulse_start (stepper_t *motors)
@@ -1728,6 +1743,11 @@ static void trinamic_homing (bool on, axes_signals_t homing_cycle)
     homing.mask = driver_enabled.mask & trinamic.homing_enable.mask;
 
     is_homing = homing_cycle.mask != 0;
+
+#if (BOARD_LONGBOARD32)
+        if(is_homing)
+            set_stst_for_homing();          
+#endif    
 
     if(is_homing && homing.mask) {
 
