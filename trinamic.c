@@ -433,6 +433,8 @@ static void trinamic_settings_restore (void)
         trinamic.tmc2660_settings.sedn = TMC2660_SEDN;
         trinamic.tmc2660_settings.seimin = TMC2660_SEIMIN;
         trinamic.tmc2660_settings.drvconf = TMC2660_DRVCONF;
+
+        idx = 3;
     #endif    
 
     do {
@@ -491,7 +493,7 @@ static void trinamic_settings_restore (void)
 #else
                 trinamic.driver[idx].mode = TMCMode_CoolStep;
 #endif
-                trinamic.driver_enable.z = TMC_A_ENABLE;
+                trinamic.driver_enable.a = TMC_A_ENABLE;
                 trinamic.driver[idx].current = TMC_A_CURRENT;
                 trinamic.driver[idx].hold_current_pct = TMC_A_HOLD_CURRENT_PCT;
                 trinamic.driver[idx].microsteps = TMC_A_MICROSTEPS;
@@ -893,6 +895,13 @@ static void on_settings_changed (settings_t *settings, settings_changed_flags_t 
 #endif
 
 }
+#if (BOARD_LONGBOARD32)
+static bool non_trinamic_driver_config (motor_map_t motor){
+    bool ok = false;
+    ok = (stepper[motor.id] = TMC2660_AddNullMotor(motor)) != NULL;    
+    return ok;
+}
+#endif
 
 static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
 {
@@ -1024,7 +1033,13 @@ static void trinamic_drivers_init (axes_signals_t axes)
         if(bit_istrue(axes.mask, bit(motor_map[--motor].axis))) {
             if((ok = trinamic_driver_config(motor_map[motor], --seq)))
                 n_enabled++;
+        } 
+#if (BOARD_LONGBOARD32)        
+        else{
+            //ensure non trinamic entries are nulled out.
+            ok = non_trinamic_driver_config(motor_map[motor]);
         }
+#endif        
     } while(ok && motor);
 
     tmc_motors_set(ok ? n_enabled : 0);
@@ -1609,6 +1624,9 @@ static void trinamic_stepper_enable (axes_signals_t enable)
         motor++;
     }
 
+    if(stepper_enable)
+        stepper_enable(enable);
+
 }
 #endif
 
@@ -2152,6 +2170,7 @@ static void count_motors (motor_map_t motor)
 static void assign_motors (motor_map_t motor)
 {
     motor_map[n_motors++].value = motor.value;
+
 }
 
 static bool on_driver_setup (settings_t *settings)
