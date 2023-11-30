@@ -279,8 +279,10 @@ static status_code_t set_axis_setting (setting_id_t setting, uint_fast16_t value
             trinamic.driver[axis].current = (uint16_t)value;
             do {
                 motor--;
-                if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis)
-                    stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                if(stepper[motor]->get_config){              
+                    if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis)
+                        stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                }
             } while(motor);
             break;
 
@@ -290,23 +292,27 @@ static status_code_t set_axis_setting (setting_id_t setting, uint_fast16_t value
             trinamic.driver[axis].hold_current_pct = (uint16_t)value;
             do {
                 motor--;
-                if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis)
-                    stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                if(stepper[motor]->get_config){
+                    if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis)
+                        stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+                }
             } while(motor);
             break;
 
         case Setting_AxisMicroSteps:
             do {
                 motor--;
-                if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis) {
-                    if(stepper[motor]->microsteps_isvalid(motor, (uint16_t)value)) {
-                        trinamic.driver[axis].microsteps = value;
-                        stepper[motor]->set_microsteps(motor, trinamic.driver[axis].microsteps);
-                        if(report.sg_status_motormask.mask & bit(axis))
-                            report.msteps = trinamic.driver[axis].microsteps;
-                    } else {
-                        status = Status_InvalidStatement;
-                        break;
+                if(stepper[motor]->get_config){                
+                    if(stepper[motor] && stepper[motor]->get_config(motor)->motor.axis == axis) {
+                        if(stepper[motor]->microsteps_isvalid(motor, (uint16_t)value)) {
+                            trinamic.driver[axis].microsteps = value;
+                            stepper[motor]->set_microsteps(motor, trinamic.driver[axis].microsteps);
+                            if(report.sg_status_motormask.mask & bit(axis))
+                                report.msteps = trinamic.driver[axis].microsteps;
+                        } else {
+                            status = Status_InvalidStatement;
+                            break;
+                        }
                     }
                 }
             } while(motor);
