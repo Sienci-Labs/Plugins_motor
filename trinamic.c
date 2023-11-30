@@ -440,7 +440,7 @@ static void trinamic_settings_restore (void)
         trinamic.tmc2660_settings.seimin = TMC2660_SEIMIN;
         trinamic.tmc2660_settings.drvconf = TMC2660_DRVCONF;
 
-        idx = 3;
+        //idx = 3;
     #endif    
 
     do {
