@@ -64,7 +64,7 @@ static user_mcode_ptrs_t user_mcode;
 static trinamic_driver_if_t driver_if = {0};
 static trinamic_settings_t trinamic;
 
-static on_execute_realtime_ptr on_execute_realtime, on_execute_delay;
+static on_execute_realtime_ptr on_execute_realtime, on_execute_delay = NULL;
 #if BOARD_LONGBOARD32
 #ifndef TRINAMIC_STATUS_DELAY
 #define TRINAMIC_STATUS_DELAY 254
@@ -1055,12 +1055,16 @@ static void trinamic_drivers_init (axes_signals_t axes)
         memset(stepper, 0, sizeof(stepper));
     } else{
 #if BOARD_LONGBOARD32
-        //on successful init, enable monitoring.        
-        on_execute_realtime = grbl.on_execute_realtime;
-        grbl.on_execute_realtime = trinamic_poll_realtime;
+        //on successful init, enable monitoring.
+        if(on_execute_realtime == NULL){        
+            on_execute_realtime = grbl.on_execute_realtime;
+            grbl.on_execute_realtime = trinamic_poll_realtime;
+        }
 
-        on_execute_delay = grbl.on_execute_delay;
-        grbl.on_execute_delay = trinamic_poll_delay;
+        if(on_execute_delay == NULL){
+            on_execute_delay = grbl.on_execute_delay;
+            grbl.on_execute_delay = trinamic_poll_delay;
+        }
 
         //on successful init, enable STST reduction
         #if (STST_REDUCTION)
