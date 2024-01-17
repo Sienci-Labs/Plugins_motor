@@ -904,7 +904,7 @@ static void on_settings_changed (settings_t *settings, settings_changed_flags_t 
 #if (BOARD_LONGBOARD32)
 static bool non_trinamic_driver_config (motor_map_t motor){
     bool ok = false;
-    ok = (stepper[motor.id] = TMC2660_AddNullMotor(motor)) != NULL;    
+    ok = (stepper[motor.id] = TMC2660_AddNULLMotor(motor)) != NULL;    
     return ok;
 }
 #endif
