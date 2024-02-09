@@ -77,6 +77,9 @@ static stepper_t * st;  //storage for stepper data
 static TMC_drv_status_t status[5];
 
 static stepper_enable_ptr stepper_enable = NULL;
+static stepper_wake_up_ptr stepper_wakeup = NULL;
+static driver_reset_ptr driver_reset = NULL;
+static settings_t *driver_settings;
 static sys_state_t current_state;           // For storing the current state from sys.state via state_get()
 
 #endif
@@ -933,8 +936,8 @@ static bool trinamic_driver_config (motor_map_t motor, uint8_t seq)
     if(!ok) {
         #ifndef BOARD_LONGBOARD32
         protocol_enqueue_rt_command(pos_failed);
-        #endif
         system_raise_alarm(Alarm_SelftestFailed);
+        #endif
         return false;
     }
 
@@ -1638,6 +1641,32 @@ static void trinamic_stepper_enable (axes_signals_t enable)
         stepper_enable(enable);
 
 }
+/*
+static void trinamic_stepper_wakeup ()
+{
+    uint_fast8_t motor = 0;
+    
+    while(motor<n_motors) {
+        if(stepper[motor]->update_settings)
+            stepper[motor]->update_settings(motor, &trinamic.tmc2660_settings);
+        motor++;
+    }
+
+    if(stepper_wakeup)
+        stepper_wakeup();
+
+}
+*/
+
+static void trinamic_stepper_reset ()
+{    
+    hal.delay_ms(100, NULL); // Allow time for drivers to boot
+    trinamic_drivers_setup();
+
+    if(driver_reset)
+        driver_reset();
+}
+
 #endif
 
 #if TMC_POLL_STALLED
@@ -2188,6 +2217,9 @@ static bool on_driver_setup (settings_t *settings)
     bool ok;
 
     if((ok = driver_setup(settings))) {
+        #if (BOARD_LONGBOARD32)
+            driver_settings = settings;
+        #endif
         hal.delay_ms(100, NULL); // Allow time for drivers to boot
         trinamic_drivers_setup();
     }
@@ -2251,6 +2283,13 @@ bool trinamic_init (void)
 #if (BOARD_LONGBOARD32)
         stepper_enable = hal.stepper.enable;
         hal.stepper.enable = trinamic_stepper_enable;
+
+        //stepper_wakeup = hal.stepper.wake_up;
+        //hal.stepper.wake_up = trinamic_stepper_wakeup;
+
+        driver_reset = hal.driver_reset;
+        hal.driver_reset = trinamic_stepper_reset;
+
 #endif
 
     }
