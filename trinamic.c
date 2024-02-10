@@ -200,12 +200,15 @@ static const setting_descr_t trinamic_settings_descr[] = {
                                   "1: Use with TBL of minimum 24 clocks." },
     { Setting_SLB32_TMC2660_tbl, "Blanking time interval in system clock periods (0-3 = 16,24,36,54). Needs to cover the switching event and the duration of the ringing on the sense resistor." },
     { Setting_SLB32_TMC2660_chm, "Chopper mode. Affects HDEC, HEND, and HSTRT parameters.\\n"
-                                  "0: standard mode (SpreadCycle).\\n"
-                                  "1: constant TOFF with fast decay time. Fast decay is after on time. Fast decay time is also terminated when the negative nominal current is reached." },
+                                  "0: Standard mode (SpreadCycle).\\n"
+                                  "1: Constant TOFF with fast decay time. Fast decay is after on time. Fast decay time is also terminated when the negative nominal current is reached." },
     { Setting_SLB32_TMC2660_hstr, "CHM=0: Hysteresis start, offset from HEND (0-7 = 1-8). To be effective, HEND+HSTRT must be ≤15.\\n"
                                   "CHM=1: Fast decay time. Three least-significant bits of the duration of the fast decay phase. The MSB is HDEC0. Fast decay time is a multiple of system clock periods: NCLK= 32 x (HDEC0+HSTRT)."},
-    { Setting_SLB32_TMC2660_hend, "hend: 3 - 12" },
-    { Setting_SLB32_TMC2660_hdec, "Hysteresis decrement: 0 16 clocks" },
+    { Setting_SLB32_TMC2660_hend, "Can be either negative, zero, or positive, 0-15 = -3 to 12.\\n"
+                                  "CHM=0: Hysteresis end (low). Sets the hysteresis end value after a number of decrements, used for the hysteresis chopper and controlled by HDEC. HSTRT+HEND must be less than 16. 1/512 adds to the current setting.\\n"
+                                  "CHM=1: Sine wave offset. A positive offset corrects for zero crossing error. 1/512 adds to the absolute value of each sine wave entry." },
+    { Setting_SLB32_TMC2660_hdec, "CHM=0: Hysteresis decrement interval period in system clock periods. Determines the slope of the hysteresis during on time from fast to very slow (0-3 = 16,32,48,64).\\n"
+                                  "CHM=1: Fast decay mode." },
     { Setting_SLB32_TMC2660_rndtf, "Change from fixed to randomized TOFF times, by dNCLK= -24 to +6 clocks." },
     { Setting_SLB32_TMC2660_THRESH, "StallGuard threshold." },
     { Setting_SLB32_TMC2660_semin, "Lower CoolStep threshold. If the SG value falls below SEMIN x 32, the coil current scaling factor is increased (0-15).\\n"
