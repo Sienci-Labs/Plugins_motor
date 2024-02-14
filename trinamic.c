@@ -157,19 +157,19 @@ static const setting_detail_t trinamic_settings[] = {
     { Setting_AxisExtended2, Group_Axis0, "-axis stallGuard2 slow threshold", NULL, Format_Decimal, "-##0", "-64", "63", Setting_NonCoreFn, set_axis_setting_float, get_axis_setting_float, NULL, AXIS_OPTS },
 #endif
 #if (BOARD_LONGBOARD32)
-    { Setting_SLB32_TMC2660_toff, Group_MotorDriver, "toff", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.toff, NULL, NULL },
-    { Setting_SLB32_TMC2660_tbl, Group_MotorDriver, "tbl", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.tbl, NULL, NULL },
-    { Setting_SLB32_TMC2660_chm, Group_MotorDriver, "chm", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.chm, NULL, NULL },
-    { Setting_SLB32_TMC2660_hstr, Group_MotorDriver, "hstr", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hstr, NULL, NULL },
-    { Setting_SLB32_TMC2660_hend, Group_MotorDriver, "hend", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hend, NULL, NULL },
-    { Setting_SLB32_TMC2660_hdec, Group_MotorDriver, "hdec", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hdec, NULL, NULL },
-    { Setting_SLB32_TMC2660_rndtf, Group_MotorDriver, "rndtf", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.rndtf, NULL, NULL },
+    { Setting_SLB32_TMC2660_toff, Group_MotorDriver, "Chopper toff", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.toff, NULL, NULL },
+    { Setting_SLB32_TMC2660_tbl, Group_MotorDriver, "Chopper tbl", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.tbl, NULL, NULL },
+    { Setting_SLB32_TMC2660_chm, Group_MotorDriver, "Chopper chm", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.chm, NULL, NULL },
+    { Setting_SLB32_TMC2660_hstr, Group_MotorDriver, "Chopper hstr", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hstr, NULL, NULL },
+    { Setting_SLB32_TMC2660_hend, Group_MotorDriver, "Chopper hend", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hend, NULL, NULL },
+    { Setting_SLB32_TMC2660_hdec, Group_MotorDriver, "Chopper hdec", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.hdec, NULL, NULL },
+    { Setting_SLB32_TMC2660_rndtf, Group_MotorDriver, "Chopper rndtf", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.rndtf, NULL, NULL },
     { Setting_SLB32_TMC2660_THRESH, Group_MotorDriver, "THRESH", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.thresh, NULL, NULL },
-    { Setting_SLB32_TMC2660_semin, Group_MotorDriver, "semin", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.semin, NULL, NULL },
-    { Setting_SLB32_TMC2660_seup, Group_MotorDriver, "seup", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.seup, NULL, NULL },
-    { Setting_SLB32_TMC2660_semax, Group_MotorDriver, "semax", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.semax, NULL, NULL },
-    { Setting_SLB32_TMC2660_sedn, Group_MotorDriver, "sedn", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.sedn, NULL, NULL },
-    { Setting_SLB32_TMC2660_seimin, Group_MotorDriver, "seimin", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.seimin, NULL, NULL },
+    { Setting_SLB32_TMC2660_semin, Group_MotorDriver, "CoolStep semin", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.semin, NULL, NULL },
+    { Setting_SLB32_TMC2660_seup, Group_MotorDriver, "CoolStep seup", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.seup, NULL, NULL },
+    { Setting_SLB32_TMC2660_semax, Group_MotorDriver, "CoolStep semax", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.semax, NULL, NULL },
+    { Setting_SLB32_TMC2660_sedn, Group_MotorDriver, "CoolStep sedn", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.sedn, NULL, NULL },
+    { Setting_SLB32_TMC2660_seimin, Group_MotorDriver, "CoolStep seimin", NULL, Format_Int8, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.seimin, NULL, NULL },
     { Setting_SLB32_TMC2660_drvconf, Group_MotorDriver, "drvconf_reg", NULL, Format_Integer, "###0", NULL, NULL, Setting_NonCore, &trinamic.tmc2660_settings.drvconf, NULL, NULL },
 #endif
 };
@@ -195,20 +195,30 @@ static const setting_descr_t trinamic_settings_descr[] = {
                                   "NOTE: only used for axes with Trinamic driver enabled, others use the $25 setting."
     },
 #if (BOARD_LONGBOARD32)
-    { Setting_SLB32_TMC2660_toff, "toff: 1 - 15, 0 = driver disabled" },
-    { Setting_SLB32_TMC2660_tbl, "tbl: 0 = 16, 1 = 24, 2 = 36, 3 = 54 clocks" },
-    { Setting_SLB32_TMC2660_chm, "chm: 0 = spreadCycle, 1 = constant off time" },
-    { Setting_SLB32_TMC2660_hstr, "hstr: 0 - 7" },
-    { Setting_SLB32_TMC2660_hend, "hend: 3 - 12" },
-    { Setting_SLB32_TMC2660_hdec, "Hysteresis decrement: 0 16 clocks" },
-    { Setting_SLB32_TMC2660_rndtf, "Random off time" },
-    { Setting_SLB32_TMC2660_THRESH, "Stallguard threshold" },
-    { Setting_SLB32_TMC2660_semin, "0 = Coolstep disabled" },
-    { Setting_SLB32_TMC2660_seup, "0 - 3 (1 - 8)" },
-    { Setting_SLB32_TMC2660_semax, "0 - 15" },
-    { Setting_SLB32_TMC2660_sedn, "0 - 15" },
-    { Setting_SLB32_TMC2660_seimin, "0 = 1/2 of CS, 1 = 1/4 of CS" },
-    { Setting_SLB32_TMC2660_drvconf, "DRVCONF Register defaults 0xA31F. All protections enabled." },       
+    { Setting_SLB32_TMC2660_toff, "Off time. Duration of slow decay phase as a multiple of system clock periods: NCLK= 24 + (32 x TOFF). This will limit the maximum chopper frequency (0-15).\\n"
+                                  "0: MOSFETs shut off, driver disabled.\\n"
+                                  "1: Use with TBL of minimum 24 clocks." },
+    { Setting_SLB32_TMC2660_tbl, "Blanking time interval in system clock periods (0-3 = 16,24,36,54). Needs to cover the switching event and the duration of the ringing on the sense resistor." },
+    { Setting_SLB32_TMC2660_chm, "Chopper mode. Affects HDEC, HEND, and HSTRT parameters.\\n"
+                                  "0: Standard mode (SpreadCycle).\\n"
+                                  "1: Constant TOFF with fast decay time. Fast decay is after on time. Fast decay time is also terminated when the negative nominal current is reached." },
+    { Setting_SLB32_TMC2660_hstr, "CHM=0: Hysteresis start, offset from HEND (0-7 = 1-8). To be effective, HEND+HSTRT must be ≤15.\\n"
+                                  "CHM=1: Fast decay time. Three least-significant bits of the duration of the fast decay phase. The MSB is HDEC0. Fast decay time is a multiple of system clock periods: NCLK= 32 x (HDEC0+HSTRT)."},
+    { Setting_SLB32_TMC2660_hend, "Can be either negative, zero, or positive, 0-15 = -3 to 12.\\n"
+                                  "CHM=0: Hysteresis end (low). Sets the hysteresis end value after a number of decrements, used for the hysteresis chopper and controlled by HDEC. HSTRT+HEND must be less than 16. 1/512 adds to the current setting.\\n"
+                                  "CHM=1: Sine wave offset. A positive offset corrects for zero crossing error. 1/512 adds to the absolute value of each sine wave entry." },
+    { Setting_SLB32_TMC2660_hdec, "CHM=0: Hysteresis decrement interval period in system clock periods. Determines the slope of the hysteresis during on time from fast to very slow (0-3 = 16,32,48,64).\\n"
+                                  "CHM=1: Fast decay mode." },
+    { Setting_SLB32_TMC2660_rndtf, "Change from fixed to randomized TOFF times, by dNCLK= -24 to +6 clocks." },
+    { Setting_SLB32_TMC2660_THRESH, "StallGuard threshold." },
+    { Setting_SLB32_TMC2660_semin, "Lower CoolStep threshold. If the SG value falls below SEMIN x 32, the coil current scaling factor is increased (0-15).\\n"
+                                    "0: CoolStep disabled."},
+    { Setting_SLB32_TMC2660_seup, "Number of increments of the coil current each time SG is sampled below the lower threshold (0-3 = 1,2,4,8)." },
+    { Setting_SLB32_TMC2660_semax, "Upper CoolStep threshold offset from lower threshold. If SG is sampled above (SEMIN+SEMAX+1)x32 enough times, the coil current scaling factor is decremented (0-15)." },
+    { Setting_SLB32_TMC2660_sedn, "Number of times SG must be sampled above the upper threshold before the coil current is decremented (0-3 = 32,8,2,1)." },
+    { Setting_SLB32_TMC2660_seimin, "Minimum CoolStep current as a factor of the set motor current\\n"
+                                    "0: 1/2, 1: 1/4" },
+    { Setting_SLB32_TMC2660_drvconf, "DRVCONF register defaults 0xA31F. All protections enabled." },       
 #endif
 };
 
