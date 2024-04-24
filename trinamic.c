@@ -93,6 +93,7 @@ static on_execute_realtime_ptr on_execute_realtime, on_execute_delay = NULL;
 #define TRINAMIC_STATUS_DELAY 254
 #define STST_REDUCTION 1
 
+static on_state_change_ptr on_state_change;
 static uint32_t last_ms = 0;
 static stepper_t * st;  //storage for stepper data
 
@@ -143,6 +144,7 @@ void trinamic_if_init (trinamic_driver_if_t *driver)
 static void trinamic_drivers_init (axes_signals_t axes);
 static void trinamic_settings_load (void);
 static void trinamic_settings_restore (void);
+static void trinamic_stepper_reset(void);
 
 static status_code_t set_axis_setting (setting_id_t setting, uint_fast16_t value);
 static uint32_t get_axis_setting (setting_id_t setting);
@@ -685,6 +687,27 @@ static void pos_failed (sys_state_t state)
 
 #if BOARD_LONGBOARD32
 
+static void TMC2660onStateChanged (sys_state_t state)
+{  
+    static sys_state_t previous_state;
+    uint_fast8_t motor = 0;
+    if(previous_state == STATE_ALARM){ //if coming out of alarm state ensure drivers are programmed.
+
+        trinamic_stepper_reset();
+
+        while(motor<n_motors) {
+            if(stepper[motor]->update_settings)
+                stepper[motor]->update_settings(motor, &trinamic.tmc2660_settings);
+            motor++;
+        }
+    }
+
+    previous_state = state;
+
+    if (on_state_change)         // Call previous function in the chain.
+        on_state_change(state);
+}
+
 static void poll_report (sys_state_t state)
 {
     uint_fast8_t motor = 0;
@@ -733,6 +756,7 @@ static void trinamic_poll (void)
     uint32_t ms = hal.get_elapsed_ticks();
     uint8_t stall_fault, otpw_fault;
     static bool error_active = false;
+    control_signals_t ctrl_pin_state = hal.control.get_state();
 
     if(ms < last_ms + TRINAMIC_STATUS_DELAY) // check once every update period
         return;
@@ -784,7 +808,8 @@ static void trinamic_poll (void)
     //check STST
     #if (DYNAMIC_STST)
     motor = 0;
-    if((current_state == STATE_IDLE) || (current_state == STATE_ALARM)){    
+    if((current_state == STATE_IDLE) || (current_state == STATE_ALARM)){
+    //if(((current_state == STATE_IDLE) || (current_state == STATE_ALARM)) && !(ctrl_pin_state.e_stop || ctrl_pin_state.reset)){//do not try to write to the motor if reset or estop asserted.       
         while(motor<n_motors) {
             if(stepper[motor]){
                 axis = motor_map[motor].axis;
@@ -2319,6 +2344,9 @@ bool trinamic_init (void)
 
         //stepper_wakeup = hal.stepper.wake_up;
         //hal.stepper.wake_up = trinamic_stepper_wakeup;
+
+        on_state_change = grbl.on_state_change;             // Subscribe to the state changed event by saving away the original
+        grbl.on_state_change = TMC2660onStateChanged;              // function pointer and adding ours to the chain.        
 
         driver_reset = hal.driver_reset;
         hal.driver_reset = trinamic_stepper_reset;
