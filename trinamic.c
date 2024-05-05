@@ -1699,11 +1699,13 @@ static void trinamic_stepper_enable (axes_signals_t enable)
         stepper_enable(enable);
 
 }
-/*
+
 static void trinamic_stepper_wakeup ()
 {
     uint_fast8_t motor = 0;
     
+    trinamic_stepper_reset();
+
     while(motor<n_motors) {
         if(stepper[motor]->update_settings)
             stepper[motor]->update_settings(motor, &trinamic.tmc2660_settings);
@@ -1714,11 +1716,11 @@ static void trinamic_stepper_wakeup ()
         stepper_wakeup();
 
 }
-*/
+
 
 static void trinamic_stepper_reset ()
 {    
-    hal.delay_ms(100, NULL); // Allow time for drivers to boot
+    hal.delay_ms(50, NULL); // Allow time for drivers to boot
     trinamic_drivers_setup();
 
     if(driver_reset)
@@ -2342,8 +2344,8 @@ bool trinamic_init (void)
         stepper_enable = hal.stepper.enable;
         hal.stepper.enable = trinamic_stepper_enable;
 
-        //stepper_wakeup = hal.stepper.wake_up;
-        //hal.stepper.wake_up = trinamic_stepper_wakeup;
+        stepper_wakeup = hal.stepper.wake_up;
+        hal.stepper.wake_up = trinamic_stepper_wakeup;
 
         on_state_change = grbl.on_state_change;             // Subscribe to the state changed event by saving away the original
         grbl.on_state_change = TMC2660onStateChanged;              // function pointer and adding ours to the chain.        
