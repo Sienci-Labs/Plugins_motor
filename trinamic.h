@@ -46,7 +46,11 @@
 //#define R_SENSE 50
 #include "../trinamic/tmc2660hal.h"
 //#include "../trinamic/tmc2660.h"
-#define R_SENSE 50
+#ifdef SLB_ORANGE_BOARD
+    #define R_SENSE 100
+#else
+    #define R_SENSE 50
+#endif
 #endif
 
 #ifndef TMC_POLL_STALLED
