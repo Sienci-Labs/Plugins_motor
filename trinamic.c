@@ -96,6 +96,7 @@ static on_execute_realtime_ptr on_execute_realtime, on_execute_delay = NULL;
 static on_state_change_ptr on_state_change;
 static uint32_t last_ms = 0;
 static stepper_t * st;  //storage for stepper data
+static segment_t * sg;  //storage for segment data
 
 #endif
 static TMC_drv_status_t status[5];
@@ -857,15 +858,33 @@ static void set_stst_for_block(sys_state_t grbl_state){
     
     while(motor<n_motors) {
         axis = motor_map[motor].axis;
+        #if 0
         if(st->steps[axis]){
             if(stepper[motor]->set_current){
                 stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
             }
         } else{
+            if(trinamic.driver[axis].hold_current_pct != 100){
+                if(stepper[motor]->set_current){
+                    stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
+                }
+            }
+        }
+        #else
+        if(sg->next->exec_block->steps[axis]){//if motors are used in an upcoming segment, need to power them up
+            if(stepper[motor]->set_current){
+                stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+            }
+        }else if (st->steps[axis]){//if motors are used in current segment, need to ensure they are powered up.
+            if(stepper[motor]->set_current){
+                stepper[motor]->set_current(motor, trinamic.driver[axis].current, trinamic.driver[axis].hold_current_pct);
+            }            
+        } else { //else they can be put on standby.
             if(stepper[motor]->set_current){
                 stepper[motor]->set_current(motor, (trinamic.driver[axis].current * trinamic.driver[axis].hold_current_pct)/100, trinamic.driver[axis].hold_current_pct);
             }
-        }               
+        }
+        #endif         
         motor++;
     }
 
@@ -901,6 +920,7 @@ static void stst_pulse_start (stepper_t *motors)
     
     if (motors->new_block){
         st = motors; //reference the current block
+        sg = motors->exec_segment;
         protocol_enqueue_rt_command(set_stst_for_block); //enqueue the command to set currents.
     }
 #endif
